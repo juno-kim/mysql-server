@@ -197,6 +197,7 @@ build_query(const POS &pos,
                                                     table_reference_list, /* from */
                                                     where_clause, /* opt_where_clause */
                                                     NULL, /* opt_group_clause */
+                                                    NULL, /* opt_sampling_clause */
                                                     NULL, /* opt_having_clause */
                                                     NULL, /* opt_order_clause */
                                                     NULL, /* opt_limit_clause */

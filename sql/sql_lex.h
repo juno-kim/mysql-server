@@ -740,6 +740,14 @@ public:
   Item  *having_cond() const { return m_having_cond; }
   void   set_having_cond(Item *cond) { m_having_cond= cond; }
 
+  
+  float  sampling_rate() const { return m_sampling_rate; }
+  void set_sampling_rate(float rate) { m_sampling_rate= rate; }
+  void set_sampling_query(bool set) { is_sampling_query= set; }
+  bool sampling_query() const { return is_sampling_query; }
+  void set_sampling_sum_expr(Item *expr) { sampling_sum_expr= expr; }
+  Item *get_sampling_sum_expr() const { return sampling_sum_expr; }
+
   void set_query_result(Query_result *result) { m_query_result= result; }
   Query_result *query_result() const { return m_query_result; }
   bool change_query_result(Query_result_interceptor *new_result,
@@ -876,6 +884,12 @@ private:
 
   /// Condition to be evaluated on grouped rows after grouping.
   Item *m_having_cond;
+
+
+  /// Condition to be evaluated before where condition is evaluated
+  float m_sampling_rate;
+  bool is_sampling_query;
+  Item *sampling_sum_expr;
 
 public:
 
@@ -1671,6 +1685,7 @@ union YYSTYPE {
   struct Proc_analyse_params procedure_analyse_params;
   class PT_procedure_analyse *procedure_analyse;
   Select_lock_type select_lock_type;
+  class PT_sampling *sampling; 
   class PT_union_order_or_limit *union_order_or_limit;
   class PT_table_expression *table_expression;
   class PT_table_list *table_list2;
