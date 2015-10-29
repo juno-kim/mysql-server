@@ -5683,6 +5683,15 @@ bool JOIN::estimate_rowcount()
         add("rows", tab->found_records).
         add("cost", tab->read_time);
     }
+
+    // sampling record
+    if (tab == join_tab && thd->lex->select_lex->sampling_query())
+    {
+      sampling_estimated_records= tab->found_records;
+
+      float rate= thd->lex->select_lex->sampling_rate(); 
+      sampling_target_records= (ha_rows)(tab->found_records * rate);
+    }
   }
 
   return false;
@@ -9859,6 +9868,20 @@ bool optimize_cond(THD *thd, Item **cond, COND_EQUAL **cond_equal,
   Opt_trace_object trace_cond(trace, "condition_processing");
   trace_cond.add_alnum("condition", join_list ? "WHERE" : "HAVING");
   trace_cond.add("original_condition", *cond);
+
+  bool is_sampling_query= thd->lex->select_lex->sampling_query();
+
+  if (is_sampling_query)
+  {
+    double rate = thd->lex->select_lex->sampling_rate();
+    my_decimal temp;
+    double2my_decimal(E_DEC_FATAL_ERROR, rate, &temp);
+
+    String buf;
+    my_decimal2string(E_DEC_FATAL_ERROR, &temp, 0, 0, 0, &buf);
+    trace_cond.add_alnum("sampling_rate", buf.ptr()); 
+  }
+
   Opt_trace_array trace_steps(trace, "steps");
 
   /*

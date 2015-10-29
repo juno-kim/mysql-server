@@ -890,6 +890,7 @@ private:
   float m_sampling_rate;
   bool is_sampling_query;
   Item *sampling_sum_expr;
+  ha_rows sampling_target_count;
 
 public:
 

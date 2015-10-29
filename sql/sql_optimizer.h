@@ -80,6 +80,8 @@ public:
       found_records(0),
       examined_rows(0),
       row_limit(0),
+      sampling_estimated_records(0),
+      sampling_target_records(0),
       m_select_limit(0),
       fetch_limit(HA_POS_ERROR),
       best_positions(NULL),
@@ -240,6 +242,11 @@ public:
   ha_rows found_records;
   ha_rows examined_rows;
   ha_rows row_limit;
+
+  // sampling target records
+  ha_rows       sampling_estimated_records;
+  ha_rows       sampling_target_records;
+
   // m_select_limit is used to decide if we are likely to scan the whole table.
   ha_rows m_select_limit;
   /**
