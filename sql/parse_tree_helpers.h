@@ -59,21 +59,7 @@ class PT_item_list : public Parse_tree_node
 public:
   List<Item> value;
 
-  virtual bool contextualize(Parse_context *pc)
-  {
-    if (super::contextualize(pc))
-      return true;
-    List_iterator<Item> it(value);
-    Item *item;
-    while ((item= it++))
-    {
-      if (item->itemize(pc, &item))
-        return true;
-      it.replace(item);
-    }
-    return false;
-  }
-
+  virtual bool contextualize(Parse_context *pc);
   bool is_empty() const { return value.is_empty(); }
   uint elements() const { return value.elements; }
 

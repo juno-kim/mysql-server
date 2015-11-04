@@ -21,6 +21,7 @@
 #include "sp_instr.h"
 #include "auth/auth_common.h"
 
+#include "item_sum.h"
 
 /**
   Create an object to represent a SP variable in the Item-hierarchy.
@@ -427,6 +428,50 @@ bool sp_create_assignment_instr(THD *thd, const char *expr_end_ptr)
   thd->lex->option_type= inner_option_type;
 
   return false;
+}
+
+bool PT_item_list::contextualize(Parse_context *pc)
+{
+    if (super::contextualize(pc))
+      return true;
+    List_iterator<Item> it(value);
+    Item *item;
+    while ((item= it++))
+    {
+      if (item->itemize(pc, &item))
+        return true;
+      it.replace(item);
+    }
+    /* 
+      If this query is using sampling, add stddev expression dynamically.
+    */
+    if (pc->select->sampling_query())
+    {
+      Item *item_std_expr = NULL;
+      it.init(value);
+      while ((item= it++))
+      {
+        if (item->type() == Item::SUM_FUNC_ITEM
+            && ((Item_sum *)item)->sum_func() == Item_sum::AVG_FUNC)
+        {
+          item_std_expr= ((Item_sum_avg *)item)->std_expr_for_sampling;
+          break;
+        }
+      }
+      
+      if (item_std_expr)
+      {
+        value.push_back(item_std_expr);
+        it.init(value);
+        while ((item= it++))
+        {
+          if (item->itemize(pc, &item))
+            return true;
+          it.replace(item);
+        }
+      }
+    }
+    return false;
 }
 
 

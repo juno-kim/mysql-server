@@ -9982,6 +9982,12 @@ sum_expr:
           AVG_SYM '(' in_sum_expr ')'
           {
             $$= NEW_PTN Item_sum_avg(@$, $3, FALSE);
+
+            /* create stddev expression for sampling use */
+            Item *std= NEW_PTN Item_sum_std(@$, $3, 0);
+            LEX_STRING std_alias = { (char *)"stddev", 6 };
+            Item* std_expr= NEW_PTN PTI_expr_with_alias(@$, std, @3.cpp, std_alias); 
+            ((Item_sum_avg *)$$)->std_expr_for_sampling= std_expr;
           }
         | AVG_SYM '(' DISTINCT in_sum_expr ')'
           {
