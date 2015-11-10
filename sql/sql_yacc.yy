@@ -901,6 +901,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, YYLTYPE **c, ulong *yystacksize);
 %token  QUERY_SYM
 %token  QUICK
 %token  RANGE_SYM                     /* SQL-2003-R */
+%token  RATE_SYM
 %token  READS_SYM                     /* SQL-2003-R */
 %token  READ_ONLY_SYM
 %token  READ_SYM                      /* SQL-2003-N */
@@ -956,6 +957,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, YYLTYPE **c, ulong *yystacksize);
 %token  ROW_SYM                       /* SQL-2003-R */
 %token  ROW_COUNT_SYM                 /* SQL-2003-N */
 %token  RTREE_SYM
+%token  SAMPLING_SYM
 %token  SAVEPOINT_SYM                 /* SQL-2003-R */
 %token  SCHEDULE_SYM
 %token  SCHEMA_NAME_SYM               /* SQL-2003-N */
@@ -1067,6 +1069,7 @@ bool my_yyoverflow(short **a, YYSTYPE **b, YYLTYPE **c, ulong *yystacksize);
 %token  UNCOMMITTED_SYM               /* SQL-2003-N */
 %token  UNDEFINED_SYM
 %token  UNDERSCORE_CHARSET
+%token  UNDER_SYM
 %token  UNDOFILE_SYM
 %token  UNDO_BUFFER_SIZE_SYM
 %token  UNDO_SYM                      /* FUTURE-USE */
@@ -1457,6 +1460,8 @@ END_OF_INPUT
 %type <procedure_analyse> opt_procedure_analyse_clause
 
 %type <select_lock_type> opt_select_lock_type
+
+%type <sampling> opt_sampling_clause
 
 %type <union_order_or_limit> union_order_or_limit
 
@@ -8979,12 +8984,12 @@ select_part2:
           opt_limit_clause
           opt_select_lock_type
           {
-            $$= NEW_PTN PT_select_part2($1, NULL, NULL, NULL, NULL, NULL,
+            $$= NEW_PTN PT_select_part2($1, NULL, NULL, NULL, NULL, NULL, NULL,
                                         $2, $3, NULL, NULL, $4);
           }
         | select_options_and_item_list into opt_select_lock_type
           {
-            $$= NEW_PTN PT_select_part2($1, $2, NULL, NULL, NULL, NULL, NULL,
+            $$= NEW_PTN PT_select_part2($1, $2, NULL, NULL, NULL, NULL, NULL, NULL,
                                         NULL, NULL, NULL, $3);
           }
         | select_options_and_item_list  /* #1 */
@@ -8992,27 +8997,28 @@ select_part2:
           from_clause                   /* #3 */
           opt_where_clause              /* #4 */
           opt_group_clause              /* #5 */
-          opt_having_clause             /* #6 */
-          opt_order_clause              /* #7 */
-          opt_limit_clause              /* #8 */
-          opt_procedure_analyse_clause  /* #9 */
-          opt_into                      /* #10 */
-          opt_select_lock_type          /* #11 */
+          opt_sampling_clause           /* #6 */
+          opt_having_clause             /* #7 */
+          opt_order_clause              /* #8 */
+          opt_limit_clause              /* #9 */
+          opt_procedure_analyse_clause  /* #10 */
+          opt_into                      /* #11 */
+          opt_select_lock_type          /* #12 */
           {
-            if ($2 && $10)
+            if ($2 && $11)
             {
               /* double "INTO" clause */
-              YYTHD->parse_error_at(@10, ER(ER_SYNTAX_ERROR));
+              YYTHD->parse_error_at(@11, ER(ER_SYNTAX_ERROR));
               MYSQL_YYABORT;
             }
-            if ($9 && ($2 || $10))
+            if ($10 && ($2 || $11))
             {
               /* "INTO" with "PROCEDURE ANALYSE" */
               my_error(ER_WRONG_USAGE, MYF(0), "PROCEDURE", "INTO");
               MYSQL_YYABORT;
             }
             $$= NEW_PTN PT_select_part2($1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
-                                        $11);
+                                        $11, $12);
           }
         ;
 
@@ -9122,6 +9128,18 @@ opt_select_lock_type:
             $$.is_set= true;
             $$.lock_type= TL_READ_WITH_SHARED_LOCKS;
             $$.is_safe_to_cache_query= false;
+          }
+        ;
+
+opt_sampling_clause:
+          /* empty */ { $$= NULL; }
+        | UNDER_SYM SAMPLING_SYM RATE_SYM NUM_literal
+          {
+            ITEMIZE($4, &$4);
+
+            float sampling_rate = (float) $4->val_real();
+
+            $$= NEW_PTN PT_sampling(sampling_rate);
           }
         ;
 
@@ -9964,6 +9982,12 @@ sum_expr:
           AVG_SYM '(' in_sum_expr ')'
           {
             $$= NEW_PTN Item_sum_avg(@$, $3, FALSE);
+
+            /* create stddev expression for sampling use */
+            Item *std= NEW_PTN Item_sum_std(@$, $3, 0);
+            LEX_STRING std_alias = { (char *)"stddev", 6 };
+            Item* std_expr= NEW_PTN PTI_expr_with_alias(@$, std, @3.cpp, std_alias); 
+            ((Item_sum_avg *)$$)->std_expr_for_sampling= std_expr;
           }
         | AVG_SYM '(' DISTINCT in_sum_expr ')'
           {

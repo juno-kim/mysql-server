@@ -873,20 +873,23 @@ public:
 };
 
 
+class Item_sum_std;
+
 class Item_sum_avg :public Item_sum_sum
 {
 public:
   ulonglong count;
   uint prec_increment;
   uint f_precision, f_scale, dec_bin_size;
+  Item *std_expr_for_sampling;
 
   Item_sum_avg(const POS &pos, Item *item_par, bool distinct) 
-    :Item_sum_sum(pos, item_par, distinct), count(0) 
+    :Item_sum_sum(pos, item_par, distinct), count(0), std_expr_for_sampling(NULL) 
   {}
 
   Item_sum_avg(THD *thd, Item_sum_avg *item)
     :Item_sum_sum(thd, item), count(item->count),
-    prec_increment(item->prec_increment) {}
+    prec_increment(item->prec_increment), std_expr_for_sampling(NULL) {}
 
   void fix_length_and_dec();
   enum Sumfunctype sum_func () const 
@@ -1003,8 +1006,6 @@ public:
     Item_sum_num::cleanup();
   }
 };
-
-class Item_sum_std;
 
 class Item_std_field :public Item_variance_field
 {

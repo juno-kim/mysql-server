@@ -1259,6 +1259,19 @@ sub_select(JOIN *join, QEP_TAB *const qep_tab,bool end_of_records)
   const bool pfs_batch_update= qep_tab->pfs_batch_update(join);
   if (pfs_batch_update)
     qep_tab->table()->file->start_psi_batch_mode();
+
+  // for sampling
+  bool is_sampling_query = join->thd->lex->select_lex->sampling_query();
+
+  Opt_trace_context * const trace= &join->thd->opt_trace;
+  Opt_trace_object trace_sampling(trace, "sampling_execution");
+
+  ha_rows N=join->sampling_estimated_records;
+  ha_rows n=join->sampling_target_records;
+  
+  trace_sampling.add("records", N); 
+  trace_sampling.add("sample target", n); 
+
   while (rc == NESTED_LOOP_OK && join->return_tab >= qep_tab_idx)
   {
     int error;
@@ -1285,6 +1298,24 @@ sub_select(JOIN *join, QEP_TAB *const qep_tab,bool end_of_records)
     {
       if (qep_tab->keep_current_rowid)
         qep_tab->table()->file->position(qep_tab->table()->record[0]);
+
+      if (is_sampling_query)
+      {
+        double x = ((double) rand() / (RAND_MAX));
+        double s = n * 1.0 / N;
+
+        if (s < x)
+        {
+          N--;
+          trace_sampling.add_alnum("skipped", "true"); 
+          continue;
+        }
+        else
+        {
+          N--;
+          n--;    
+        }
+      }
       rc= evaluate_join_record(join, qep_tab);
     }
   }

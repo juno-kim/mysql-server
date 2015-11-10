@@ -115,6 +115,29 @@ public:
   }
 };
 
+class PT_sampling : public Parse_tree_node
+{ 
+  typedef Parse_tree_node super;
+
+  float sampling_rate;
+
+public:
+  PT_sampling(float sampling_rate)
+  : sampling_rate(sampling_rate)
+  {}
+
+  virtual bool contextualize(Parse_context *pc)
+  {
+    if (super::contextualize(pc))
+        return true;
+    
+    pc->select->set_sampling_rate(sampling_rate);
+    pc->select->set_sampling_query(true);
+
+    return false;
+  }
+};
+
 
 class PT_order_list : public Parse_tree_node
 {
@@ -654,6 +677,7 @@ public:
                       PT_limit_clause *opt_limit_arg,
                       PT_procedure_analyse *opt_procedure_analyse_arg,
                       const Select_lock_type &opt_select_lock_type_arg)
+                      
    : opt_from_clause(opt_from_clause_arg),
      opt_where(opt_where_arg),
      opt_group(opt_group_arg),
@@ -688,6 +712,7 @@ public:
       pc->thd->lex->safe_to_cache_query=
         opt_select_lock_type.is_safe_to_cache_query;
     }
+
     return false;
   }
 };
@@ -2163,6 +2188,10 @@ public:
     pc->select->parsing_place= CTX_NONE;
     return false;
   }
+  
+  PT_item_list* get_item_list() const {
+    return item_list;
+  }
 };
 
 
@@ -2175,6 +2204,7 @@ class PT_select_part2 : public Parse_tree_node
   PT_table_reference_list *from_clause; // actually is optional (NULL) for DUAL
   Item *opt_where_clause;
   PT_group *opt_group_clause;
+  PT_sampling *opt_sampling_clause;
   Item *opt_having_clause;
   PT_order *opt_order_clause;
   PT_limit_clause *opt_limit_clause;
@@ -2189,6 +2219,7 @@ public:
     PT_table_reference_list *from_clause_arg,
     Item *opt_where_clause_arg,
     PT_group *opt_group_clause_arg,
+    PT_sampling *opt_sampling_arg,
     Item *opt_having_clause_arg,
     PT_order *opt_order_clause_arg,
     PT_limit_clause *opt_limit_clause_arg,
@@ -2200,6 +2231,7 @@ public:
     from_clause(from_clause_arg),
     opt_where_clause(opt_where_clause_arg),
     opt_group_clause(opt_group_clause_arg),
+    opt_sampling_clause(opt_sampling_arg),
     opt_having_clause(opt_having_clause_arg),
     opt_order_clause(opt_order_clause_arg),
     opt_limit_clause(opt_limit_clause_arg),
@@ -2214,6 +2246,7 @@ public:
     from_clause(NULL),
     opt_where_clause(NULL),
     opt_group_clause(NULL),
+    opt_sampling_clause(NULL),
     opt_having_clause(NULL),
     opt_order_clause(NULL),
     opt_limit_clause(NULL),
@@ -2225,6 +2258,8 @@ public:
   virtual bool contextualize(Parse_context *pc)
   {
     if (super::contextualize(pc) ||
+        (opt_sampling_clause != NULL &&
+         opt_sampling_clause->contextualize(pc)) ||
         select_options_and_item_list->contextualize(pc) ||
         (opt_into1 != NULL &&
          opt_into1->contextualize(pc)) ||

@@ -606,9 +606,27 @@ bool Item::itemize(Parse_context *pc, Item **res)
   if (super::contextualize(pc))
     return true;
 
+  /* 
+    If this item is already in free list, ignore adding to free list. Otherwise infinite loop is made 
+    This happens when sum_expr is shared among different expressions
+  */
+  Item *free_list_item = pc->thd->free_list;
+  bool already_exists_in_free_list = false;
+  while (free_list_item)
+  {
+    if (free_list_item == this)
+    {
+      already_exists_in_free_list = true;
+      break;
+    }
+    free_list_item= free_list_item->next;
+  }
   /* Put item in free list so that we can free all items at end */
-  next= pc->thd->free_list;
-  pc->thd->free_list= this;
+  if (!already_exists_in_free_list)
+  {
+    next= pc->thd->free_list;
+    pc->thd->free_list= this;
+  }
   /*
     Item constructor can be called during execution other then SQL_COM
     command => we should check pc->select on zero
