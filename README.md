@@ -22,3 +22,13 @@ Sampling clause can only be in the outer most SELECT clause, and cannot appear i
 If AVG aggregation function is used in SELECT clause with sampling clause, standard deviation function, aliased with "stddev", is automatically appended at the last position as the screening task description requires. Automatic standard deviation function is supported only with average function.
 
 About the method for performing sampling, sequential random sampling is performed during query execution based on the algorithm S described in the paper ["Faster Methods for Random Sampling"](http://www.mathcs.emory.edu/~cheung/papers/StreamDB/RandomSampling/1984-Vitter-Faster-random-sampling.pdf) by Jeffrey Scott Vitter, and its running time is O(N) where N is the number of total records. This latency can be enhanced by choosing another best algorithm from the paper depending on the number of total records and requested sample counts.
+
+
+Demo
+----
+
+    host: 52.192.18.126
+    port: 3306
+    username: sampling
+    password: sampling
+    
