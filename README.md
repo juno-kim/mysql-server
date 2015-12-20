@@ -32,3 +32,12 @@ Demo
     username: sampling
     password: sampling
     
+Sample query
+
+    USE test_sampling;
+
+    SELECT AVG(salary), department
+    FROM employee
+    WHERE salary > 5000 
+    GROUP BY department
+    UNDER SAMPLING RATE 0.3; 
